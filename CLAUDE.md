@@ -1,0 +1,1 @@
+This is kocainan-web, Kaan's personal site and AI agent. Stack: Next.js 14, TypeScript, Tailwind CSS, App Router, Supabase (later), Claude API (later). Single page layout: Hero section + Chat section. Chat supports rich components: ProjectCard and ContactCard. API route at /api/chat handles messages. Keep code clean, don't over-engineer, explain before doing.

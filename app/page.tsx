@@ -1,101 +1,165 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import ChatMessage, { Message } from "@/components/ChatMessage";
+
+const INITIAL_MESSAGES: Message[] = [
+  {
+    role: "assistant",
+    type: "text",
+    content:
+      "What would you like to know about me? You can ask about my work, projects, background, or how I can help you.",
+  },
+];
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const [input, setInput] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const sendMessage = async () => {
+    const text = input.trim();
+    if (!text || isStreaming) return;
+
+    const userMessage: Message = { role: "user", type: "text", content: text };
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInput("");
+    setIsStreaming(true);
+
+    // Placeholder assistant message filled via streaming
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", type: "text", content: "" },
+    ]);
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: updatedMessages }),
+      });
+
+      if (!res.body) return;
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accumulated += decoder.decode(value, { stream: true });
+        setMessages((prev) => {
+          const next = [...prev];
+          next[next.length - 1] = {
+            role: "assistant",
+            type: "text",
+            content: accumulated,
+          };
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsStreaming(false);
+      inputRef.current?.focus();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const lastContent =
+    (messages[messages.length - 1] as Extract<Message, { type: "text" }>)
+      ?.content ?? "";
+  const showTypingDots =
+    isStreaming &&
+    (lastContent === "" || lastContent.trimStart().startsWith("{"));
+
+  return (
+    <main className="flex flex-col h-screen">
+      {/* HERO */}
+      <section
+        className="flex-none flex flex-col items-center justify-center"
+        style={{ height: "30vh", background: "#0a0a0a" }}
+      >
+        <h1 className="text-4xl font-semibold tracking-tight text-white">
+          Hi, I'm Cem.
+        </h1>
+        <p className="mt-3 text-[#888] text-base">
+          Product Manager &amp; AI builder. Ask me anything.
+          <span className="inline-block w-[2px] h-[1em] bg-[#888] ml-1 align-middle animate-blink" />
+        </p>
+      </section>
+
+      {/* CHAT */}
+      <section
+        className="flex flex-col flex-1 overflow-hidden"
+        style={{ background: "#111111", borderTop: "1px solid #1f1f1f" }}
+      >
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          <div className="w-full max-w-2xl mx-auto flex flex-col gap-4">
+            {messages.map((msg, i) => (
+              <ChatMessage key={i} message={msg} />
+            ))}
+            {showTypingDots && (
+              <div className="flex justify-start">
+                <span className="text-[#555] text-sm flex gap-1 items-center">
+                  <span className="animate-blink">●</span>
+                  <span className="animate-blink" style={{ animationDelay: "0.2s" }}>●</span>
+                  <span className="animate-blink" style={{ animationDelay: "0.4s" }}>●</span>
+                </span>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+        {/* Input bar */}
+        <div
+          className="flex-none px-4 py-4"
+          style={{ borderTop: "1px solid #1f1f1f" }}
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <div className="w-full max-w-2xl mx-auto flex items-end gap-2">
+            <textarea
+              ref={inputRef}
+              rows={1}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask me something..."
+              disabled={isStreaming}
+              className="flex-1 resize-none bg-[#1a1a1a] border border-[#333] text-white placeholder-[#555] text-sm rounded-xl px-4 py-3 outline-none focus:border-[#3b82f6] transition-colors disabled:opacity-50"
+              style={{ maxHeight: "120px" }}
+              onInput={(e) => {
+                const el = e.currentTarget;
+                el.style.height = "auto";
+                el.style.height = Math.min(el.scrollHeight, 120) + "px";
+              }}
+            />
+            <button
+              onClick={sendMessage}
+              disabled={isStreaming || !input.trim()}
+              className="flex-none bg-[#3b82f6] hover:bg-[#2563eb] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-3 rounded-xl transition-colors"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
