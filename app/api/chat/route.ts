@@ -1,3 +1,5 @@
+export const runtime = 'nodejs';
+
 import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { promises as fs } from "fs";
