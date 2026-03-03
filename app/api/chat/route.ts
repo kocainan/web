@@ -5,8 +5,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { promises as fs } from "fs";
 import path from "path";
 
-const anthropic = new Anthropic();
-
 async function loadKnowledge(): Promise<string> {
   const knowledgeDir = path.join(process.cwd(), "knowledge");
   const files = await fs.readdir(knowledgeDir);
@@ -58,6 +56,7 @@ Never mix JSON and text in the same response.`;
 
 export async function POST(req: NextRequest) {
   try {
+    const anthropic = new Anthropic();
     const { messages } = await req.json();
 
     const knowledge = await loadKnowledge();
