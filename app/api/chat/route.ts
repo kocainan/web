@@ -95,7 +95,6 @@ export async function POST(req: NextRequest) {
     return new Response(readable, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
-        "Transfer-Encoding": "chunked",
       },
     });
   } catch (err) {
