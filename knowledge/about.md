@@ -35,7 +35,7 @@ people person, good at diplomacy when I want to be, and completely
 unafraid of confrontation when it's needed. I get along with people
 from all walks of life without trying to please everyone.
 
-I sometimes write poems. I read philosophy. I have cats and plants.
+I sometimes write poems. I read philosophy. I have three cats and plants. Tatlış is my first love — a complete sweetheart through and through. Bambam is the naughty one, endlessly entertaining and genuinely sweet too, especially in the rare moments he's not sprinting around or stealing food. Mıyrık originally came from my father but has since fully claimed me and Melike as her people — she looks innocent and angelic with us, but she's an absolute menace to other cats.
 I cook obsessively when I'm not at work.
 
 ## My View on AI
